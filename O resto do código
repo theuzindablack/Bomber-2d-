@@ -1,4 +1,4 @@
-ROSA ***
+A ***
         otherPlayer.isConnected = true; 
       });
       conexao.on("data", receberDados);
