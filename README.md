@@ -1,8 +1,3 @@
-# Bomber-2d-
-Hehe
-
-
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -676,4 +671,92 @@ Hehe
     conexao.on("data", receberDados);
     conexao.on("open", () => {
         meuIdElement.innerHTML = `✅ Conectado como Jogador B (Rosa)! ID: <b>${peer.id}</b>`;
-        // *** HABILITA O JOGADOR ROS
+        // *** HABILITA O JOGADOR ROSA ***
+        otherPlayer.isConnected = true; 
+    });
+  });
+
+  function conectar() {
+    const id = conectarInput.value.trim();
+    if (id) {
+      conexao = peer.connect(id);
+      
+      // Se iniciou a conexão, ele é o Jogador A
+      setPlayerRole(true);
+      
+      conexao.on("open", () => {
+        meuIdElement.innerHTML = `✅ Conectado como Jogador A (Verde)! ID: <b>${peer.id}</b>`;
+        // *** HABILITA O JOGADOR ROSA ***
+        otherPlayer.isConnected = true; 
+      });
+      conexao.on("data", receberDados);
+    }
+  }
+  
+  function enviarPosicao() {
+    if (conexao && conexao.open) {
+      const positionData = { 
+          type: 'position', 
+          x: myPlayer.x, 
+          y: myPlayer.y, 
+          keys: keys 
+      };
+      conexao.send(positionData);
+    }
+  }
+
+  function enviarBomba(bomb) {
+      if (conexao && conexao.open) {
+          const bombData = { type: 'new_bomb', col: bomb.col, row: bomb.row, time: bomb.time, ownerId: bomb.ownerId };
+          conexao.send(bombData);
+      }
+  }
+  
+  function enviarDestruicaoMuro(col, row) {
+      if (conexao && conexao.open) {
+          const mapUpdateData = { type: 'map_update_wall_destroyed', col: col, row: row };
+          conexao.send(mapUpdateData);
+      }
+  }
+
+  function receberDados(data) {
+      if (data.type === 'position') {
+          otherPlayer.x = data.x;
+          otherPlayer.y = data.y;
+          otherPlayer.currentTile = pixelToGrid(otherPlayer.x + PLAYER_SIZE / 2, otherPlayer.y + PLAYER_SIZE / 2);
+
+          // Se o outro jogador for atingido (imóvel), ele para de se mover na minha tela também.
+          if (data.keys) {
+              // Lógica de imobilização: se todas as chaves estão falsas, o jogador está "morto" ou parado
+              const isImmobilized = !data.keys.up && !data.keys.down && !data.keys.left && !data.keys.right;
+              
+              if (isImmobilized) {
+                  // Pode adicionar lógica visual de "morte" aqui se quiser
+              }
+          }
+      } else if (data.type === 'new_bomb') {
+          const existingBomb = bombs.find(b => b.col === data.col && b.row === data.row);
+          if (!existingBomb) {
+              const timeDifference = data.time - Date.now(); 
+              bombs.push({ 
+                  col: data.col, 
+                  row: data.row, 
+                  time: Date.now() + timeDifference,
+                  ownerId: data.ownerId, 
+                  ownerTile: { col: data.col, row: data.row } 
+              });
+          }
+      } else if (data.type === 'map_update_wall_destroyed') {
+          const { col, row } = data;
+          if (gameMap[row] && gameMap[row][col] === 2) {
+              gameMap[row][col] = 0; 
+              showExplosionEffect([{ col: col, row: row }]);
+          }
+      }
+  }
+
+  // Iniciar o jogo
+  setupResponsiveCanvas();
+</script>
+</body>
+</html>
